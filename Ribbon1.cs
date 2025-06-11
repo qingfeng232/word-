@@ -1,4 +1,5 @@
 ﻿using Microsoft.Office.Tools.Ribbon;
+using Excel = Microsoft.Office.Interop.Excel;
 using Microsoft.VisualBasic;
 using System;
 using System.Collections.Generic;
@@ -17,9 +18,31 @@ namespace word插件
         private string selectedExcelPath = string.Empty,
                        selectedWordPath = string.Empty,
                        GenerateCatalogPath = string.Empty;
+        private List<string>GetExcelColumnNames(string excelPath)
+        {
+            var columnNames = new List<string>();
+            Excel.Application excelApp = new Excel.Application();
+            Excel.Workbook workbook = excelApp.Workbooks.Open(excelPath);
+            Excel.Worksheet worksheet = workbook.Sheets[1];
 
+            int col = 1;
+            // 从第一列开始
+            while (true)
+            {
+                var cellValue = worksheet.Cells[1, col].Value;
+                if (cellValue == null || string.IsNullOrWhiteSpace(cellValue.ToString()))
+                    break; // 如果单元格为空，停止读取}
+                columnNames.Add(cellValue.ToString());
+                col++;
+              
+            }
+            workbook.Close(false);
+            excelApp.Quit();
+            return columnNames;
+        }
 
         public object Private { get; private set; }
+
 
         private void Ribbon1_Load(object sender, RibbonUIEventArgs e)
         {
@@ -113,6 +136,8 @@ namespace word插件
 
         }
 
+       
+
         private void GenerateCatalog_Click(object sender, RibbonControlEventArgs e)
         {
             FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog
@@ -134,9 +159,28 @@ namespace word插件
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+        private void comboBox1_ItemsLoading(object sender, RibbonControlEventArgs e)
+        {
+            comboBox1.Items.Clear();
+
+
+            var columnNames = GetExcelColumnNames(selectedExcelPath); // 你自定义的函数
+
+            foreach (var name in columnNames)
+            {
+                RibbonDropDownItem item = Globals.Factory.GetRibbonFactory().CreateRibbonDropDownItem();
+                item.Label = name;
+                comboBox1.Items.Add(item);
+            }
+        }
+        private void comboBox1_SelectionChanged(object sender, RibbonControlEventArgs e)
+        {
+            
+        }
+
     }
-          
- }   
+
+}   
 
 
         

@@ -40,7 +40,7 @@
             this.SelecWordlButton = this.Factory.CreateRibbonButton();
             this.GenerateCatalog = this.Factory.CreateRibbonButton();
             this.group2 = this.Factory.CreateRibbonGroup();
-            this.dropDown1 = this.Factory.CreateRibbonDropDown();
+            this.comboBox1 = this.Factory.CreateRibbonComboBox();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
             this.group2.SuspendLayout();
@@ -85,14 +85,16 @@
             // 
             // group2
             // 
-            this.group2.Items.Add(this.dropDown1);
+            this.group2.Items.Add(this.comboBox1);
             this.group2.Label = "数据处理";
             this.group2.Name = "group2";
             // 
-            // dropDown1
+            // comboBox1
             // 
-            this.dropDown1.Label = "excel拆分依据";
-            this.dropDown1.Name = "dropDown1";
+            this.comboBox1.Label = "comboBox1";
+            this.comboBox1.Name = "comboBox1";
+            this.comboBox1.ItemsLoading += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.comboBox1_ItemsLoading);
+            this.comboBox1.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.comboBox1_SelectionChanged);
             // 
             // Ribbon1
             // 
@@ -118,7 +120,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SelecWordlButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton GenerateCatalog;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
-        internal Microsoft.Office.Tools.Ribbon.RibbonDropDown dropDown1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonComboBox comboBox1;
     }
 
     partial class ThisRibbonCollection

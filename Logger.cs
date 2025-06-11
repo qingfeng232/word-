@@ -32,5 +32,9 @@ namespace word插件
     }
     internal class Logger
     {
+        internal static void Write(string v)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
