@@ -41,6 +41,7 @@
             this.GenerateCatalog = this.Factory.CreateRibbonButton();
             this.group2 = this.Factory.CreateRibbonGroup();
             this.comboBox1 = this.Factory.CreateRibbonComboBox();
+            this.ExcelDataProcessing = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
             this.group2.SuspendLayout();
@@ -86,15 +87,24 @@
             // group2
             // 
             this.group2.Items.Add(this.comboBox1);
+            this.group2.Items.Add(this.ExcelDataProcessing);
             this.group2.Label = "数据处理";
             this.group2.Name = "group2";
             // 
             // comboBox1
             // 
-            this.comboBox1.Label = "comboBox1";
+            this.comboBox1.Label = "表格拆分依据";
             this.comboBox1.Name = "comboBox1";
+            this.comboBox1.Text = null;
             this.comboBox1.ItemsLoading += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.comboBox1_ItemsLoading);
             this.comboBox1.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.comboBox1_SelectionChanged);
+            // 
+            // ExcelDataProcessing
+            // 
+            this.ExcelDataProcessing.Label = "运行Excel数据处理";
+            this.ExcelDataProcessing.Name = "ExcelDataProcessing";
+            this.ExcelDataProcessing.SuperTip = "选择制作的word模板文件";
+            this.ExcelDataProcessing.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.ExcelDataProcessing_Click);
             // 
             // Ribbon1
             // 
@@ -121,6 +131,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton GenerateCatalog;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
         internal Microsoft.Office.Tools.Ribbon.RibbonComboBox comboBox1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton ExcelDataProcessing;
     }
 
     partial class ThisRibbonCollection

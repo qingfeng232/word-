@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Windows.Forms;
+using word插件;
 
 
 namespace word插件
@@ -15,40 +16,44 @@ namespace word插件
     public partial class Ribbon1
     {
         // 定义全局变量
-        private string selectedExcelPath = string.Empty,
-                       selectedWordPath = string.Empty,
-                       GenerateCatalogPath = string.Empty;
-        private List<string>GetExcelColumnNames(string excelPath)
+        public static string selectedExcelPath = string.Empty,
+                                     selectedWordPath = string.Empty,
+                                  GenerateCatalogPath = string.Empty,
+                             selecteedExcelColumnName = string.Empty;
+        // 定义Excel和Word的起始行
+        public static int ExcelDateFirstRaw = 2,
+                                    WordDateFirstRaw = 2;
+        //读取的Excel的表头
+        public static List<string> ExcelcolumnNames = new List<string>();
+
+        private List<string> GetExcelColumnNames(string Path, int Datarow)
         {
             var columnNames = new List<string>();
             Excel.Application excelApp = new Excel.Application();
-            Excel.Workbook workbook = excelApp.Workbooks.Open(excelPath);
+            Excel.Workbook workbook = excelApp.Workbooks.Open(Path);
             Excel.Worksheet worksheet = workbook.Sheets[1];
 
+            int HeaderRow = Datarow - 1;
             int col = 1;
             // 从第一列开始
             while (true)
             {
-                var cellValue = worksheet.Cells[1, col].Value;
+                var cellValue = worksheet.Cells[HeaderRow, col].Value;
                 if (cellValue == null || string.IsNullOrWhiteSpace(cellValue.ToString()))
                     break; // 如果单元格为空，停止读取}
                 columnNames.Add(cellValue.ToString());
                 col++;
-              
             }
             workbook.Close(false);
             excelApp.Quit();
+            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
             return columnNames;
         }
-
         public object Private { get; private set; }
-
-
         private void Ribbon1_Load(object sender, RibbonUIEventArgs e)
         {
 
         }
-
         private void SelectExcelButton_Click(object sender, RibbonControlEventArgs e)
         {
             // 使用 WinForms 的文件选择对话框
@@ -62,7 +67,7 @@ namespace word插件
             // 如果用户选择了文件
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                 selectedExcelPath = openFileDialog.FileName;
+                selectedExcelPath = openFileDialog.FileName;
 
                 // 弹出确认窗口
                 MessageBox.Show("你选择的 Excel 文件是：\n" + selectedExcelPath, "文件选择成功",
@@ -79,19 +84,17 @@ namespace word插件
             }
 
             // Excel文件的数据处理
-            int ExcelDateFirstRaw = 2; // 默认起始行
             string input = Microsoft.VisualBasic.Interaction.InputBox("请输入Excel数据起始行", "Excel数据起始行", "2", 2);
             if (int.TryParse(input, out int row))
             {
                 ExcelDateFirstRaw = row;
-                MessageBox.Show("更新起始位置"+ ExcelDateFirstRaw + "行", "更新成功" ,MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("更新起始位置" + ExcelDateFirstRaw + "行", "更新成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
                 MessageBox.Show("输入无效，请输入一个数字。", "使用默认第二行", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
-
         private void SelectWordButton_Click(object sender, RibbonControlEventArgs e)
         {
             // 使用 WinForms 的文件选择对话框
@@ -104,8 +107,8 @@ namespace word插件
             // 如果用户选择了文件
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
-                 selectedWordPath = openFileDialog.FileName;
-                 GenerateCatalogPath = Path.GetDirectoryName(openFileDialog.FileName);
+                selectedWordPath = openFileDialog.FileName;
+                GenerateCatalogPath = Path.GetDirectoryName(openFileDialog.FileName);
 
                 // 弹出确认窗口
                 MessageBox.Show("你选择的 Excel 文件是：\n" + selectedWordPath, "文件选择成功",
@@ -121,7 +124,6 @@ namespace word插件
 
             }
             // Word文件的数据处理
-            int WordDateFirstRaw = 2; // 默认起始行
             string input = Microsoft.VisualBasic.Interaction.InputBox("请输入Excel数据起始行", "Excel数据起始行", "2", 2);
             if (int.TryParse(input, out int row))
             {
@@ -135,9 +137,6 @@ namespace word插件
 
 
         }
-
-       
-
         private void GenerateCatalog_Click(object sender, RibbonControlEventArgs e)
         {
             FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog
@@ -150,7 +149,7 @@ namespace word插件
             if (folderBrowserDialog.ShowDialog() == DialogResult.OK)
             {
                 GenerateCatalogPath = folderBrowserDialog.SelectedPath;
-                MessageBox.Show("生成目录已选择：" + GenerateCatalogPath, "目录选择成功", 
+                MessageBox.Show("生成目录已选择：" + GenerateCatalogPath, "目录选择成功",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
@@ -164,9 +163,9 @@ namespace word插件
             comboBox1.Items.Clear();
 
 
-            var columnNames = GetExcelColumnNames(selectedExcelPath); // 你自定义的函数
+            ExcelcolumnNames = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw); // 你自定义的函数
 
-            foreach (var name in columnNames)
+            foreach (var name in ExcelcolumnNames)
             {
                 RibbonDropDownItem item = Globals.Factory.GetRibbonFactory().CreateRibbonDropDownItem();
                 item.Label = name;
@@ -175,14 +174,17 @@ namespace word插件
         }
         private void comboBox1_SelectionChanged(object sender, RibbonControlEventArgs e)
         {
-            
+            string selectedItem = comboBox1.Text; // 获取选中的项
+            selecteedExcelColumnName = selectedItem; // 将选中的项赋值给全局变量
         }
-
+        private void ExcelDataProcessing_Click(object sender, RibbonControlEventArgs e)
+        {      
+            List<string[]> allRows = new List<string[]>(); 
+            int count;
+            List<int> valueRows;
+            var processor = new DataProcessor();
+            List<ExcelValueDate> processedData = processor.ProcessColum(allRows, out count, out valueRows);
+            processor.SaveToJson(processedData);
+        }
     }
-
-}   
-
-
-        
-    
-
+}
