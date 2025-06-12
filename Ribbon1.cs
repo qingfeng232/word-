@@ -23,7 +23,7 @@ namespace word插件
                                   GenerateCatalogPath = string.Empty,
                              selecteedExcelColumnName = string.Empty;
         // 定义Excel和Word的起始行
-        public static int           ExcelDateFirstRaw = 2,
+        public static int ExcelDateFirstRaw = 2,
                                      WordDateFirstRaw = 2;
         //读取的Excel的表头
         public static List<string> ExcelcolumnNames = new List<string>();
@@ -77,6 +77,7 @@ namespace word插件
             }
             return result;
         }
+        //
         private void RefreshExcelColumnComboBox()
         {
             ComboBox1.Items.Clear();
@@ -102,15 +103,12 @@ namespace word插件
                 ComboBox1.Items.Add(item);
             }
         }
-
         public object Private { get; private set; }
         public List<TableMap> CurrentMapping { get; private set; }
-
         private void Ribbon1_Load(object sender, RibbonUIEventArgs e)
         {
 
         }
-
         //选择Excel文件
         private void SelectExcelButton_Click(object sender, RibbonControlEventArgs e)
         {
@@ -222,29 +220,8 @@ namespace word插件
         //遍历Excel文件表头
         private void ComboBox1_ItemsLoading(object sender, RibbonControlEventArgs e)
         {
-            ComboBox1.Items.Clear();
-            if (string.IsNullOrEmpty(selectedExcelPath))
-            {
-                MessageBox.Show("未选择Excel文件");
-                return;
-             }
-            //刷新Excel表头
-            ExcelcolumnNames = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw); // 你自定义的函数
-            if(ExcelcolumnNames.Count == 0)
-            {
-                MessageBox.Show("未读取表头");
-                return;
-            }
-            foreach (var name in ExcelcolumnNames)
-            {
-                RibbonDropDownItem item = Globals.Factory.GetRibbonFactory().CreateRibbonDropDownItem();
-                item.Label = name;
-                ComboBox1.Items.Add(item);
-            }
+            
         }
-
-       
-
         //选择Excel参考列
         private void ComboBox1_SelectionChanged(object sender, RibbonControlEventArgs e)
         {
@@ -378,7 +355,7 @@ namespace word插件
             var wordHeaders = GetWordColumnNames(selectedWordPath, WordDateFirstRaw);
             // 3. 读取Excel表头
             var excelHeaders = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw);
-            
+
             if (excelHeaders.Count == 0 || wordHeaders.Count == 0)
             {
                 MessageBox.Show("表头读取失败，请确认Excel和Word文件。", "错误");
@@ -386,128 +363,23 @@ namespace word插件
             }
 
             // 4. 映射弹窗
-            var mapForm = new MappingForm(wordHeaders,excelHeaders);
+            var mapForm = new MappingForm(wordHeaders, excelHeaders);
             if (mapForm.ShowDialog() == DialogResult.OK)
             {
                 List<TableMap> mapping = mapForm.MappingResult;
                 // 你可以在这里将mapping存到全局变量或导出为文件，供后续批量填充用
                 // 例如:
-                 this.CurrentMapping = mapping;
+                this.CurrentMapping = mapping;
                 MessageBox.Show("映射关系设置完成！");
             }
         }
         //生成文件
-        private void button1_Click(object sender, RibbonControlEventArgs e)
-        {   
-            string[] files = Directory.GetFiles(GenerateCatalogPath, "Excel统计_*.json");
-            if (files.Length == 0)
-            {
-                MessageBox.Show("未找到任何统计JSON文件，请先执行数据统计！");
-                return;
-            }
-            string statFile = files.OrderByDescending(f => File.GetLastWriteTime(f)).First();
+        private void Button1_Click(object sender, RibbonControlEventArgs e)
+        {
 
-            // 2. 读取Excel原数据
-            var groupList = JsonConvert.DeserializeObject<List<ExcelValueDate>>(File.ReadAllText(statFile));
-            var excelHeaders = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw);
-            var wordHeaders = GetWordColumnNames(selectedWordPath, WordDateFirstRaw);
-            // 3. 映射关系
-            var allRows = ReadExcelAllRows(selectedExcelPath);
-
-            if (CurrentMapping == null || CurrentMapping.Count == 0)
-            {
-                MessageBox.Show("未设置映射关系！"); return;
-            }
-            var mapDict = CurrentMapping.ToDictionary(x => x.WordHeader, x => x.ExcelHeader);
-            // 4. 让用户输入每页填多少行
-            string input = Microsoft.VisualBasic.Interaction.InputBox("每页填充数据行数（如13）：", "设置", "13");
-            int rowsPerPage = 13;
-            if (!int.TryParse(input, out rowsPerPage) || rowsPerPage <= 0) rowsPerPage = 13;
-
-            // 5. 每个唯一Value生成Word文件
-            foreach (var group in groupList)
-            {
-                string value = group.Value;
-                string outputPath = Path.Combine(GenerateCatalogPath, $"{value}.docx");
-                File.Copy(selectedWordPath, outputPath, true);
-
-                var wordApp = new Microsoft.Office.Interop.Word.Application();
-                var doc = wordApp.Documents.Open(outputPath, ReadOnly: false, Visible: false);
-                var table = doc.Tables[1];
-                int wordDataStart = WordDateFirstRaw;
-                int dataIdx = 0;
-                int totalRows = group.ValueRows.Count;
-                int curTableRow = wordDataStart;
-
-                // 先统计第一页、第二页数据区行数
-                int secondPageStart = wordDataStart + rowsPerPage; // 第二页数据区起始行
-                int secondPageEnd = secondPageStart + rowsPerPage - 1;
-
-
-                input = Microsoft.VisualBasic.Interaction.InputBox("每页填充数据行数（如13）：", "设置", rowsPerPage.ToString());
-                if (!int.TryParse(input, out rowsPerPage) || rowsPerPage <= 0) rowsPerPage = 13;
-
-                // 主循环：每次填满一页，不足补空行
-                while (dataIdx < totalRows)
-                {
-                    // 若当前页的数据区不存在，复制第二页的数据区到表尾
-                    if (curTableRow + rowsPerPage - 1 > table.Rows.Count)
-                    {
-                        // 复制第二页数据区
-                        for (int i = 0; i < rowsPerPage; i++)
-                        {
-                            int srcRow = secondPageStart + i;
-                            if (srcRow > table.Rows.Count) break;
-                            table.Rows.Add();
-                            int newRowIdx = table.Rows.Count;
-                            for (int c = 1; c <= table.Columns.Count; c++)
-                            {
-                                table.Cell(newRowIdx, c).Range.FormattedText =
-                                    table.Cell(srcRow, c).Range.FormattedText.Duplicate;
-                                table.Cell(newRowIdx, c).Range.Text = ""; // 清空内容
-                            }
-                        }
-                    }
-
-                    // 填一页数据
-                    for (int wordRow = curTableRow; wordRow < curTableRow + rowsPerPage; wordRow++)
-                    {
-                        // 填充数据或补空
-                        if (dataIdx < totalRows)
-                        {
-                            int excelRowIdx = group.ValueRows[dataIdx] - 1;
-                            if (excelRowIdx >= allRows.Count) { dataIdx++; continue; }
-                            var excelRow = allRows[excelRowIdx];
-
-                            for (int c = 1; c <= wordHeaders.Count; c++)
-                            {
-                                string wordHeader = wordHeaders[c - 1];
-                                if (!mapDict.TryGetValue(wordHeader, out string excelHeader)) continue;
-                                int excelColIdx = excelHeaders.IndexOf(excelHeader);
-                                if (excelColIdx < 0 || excelColIdx >= excelRow.Length) continue;
-                                table.Cell(wordRow, c).Range.Text = excelRow[excelColIdx];
-                            }
-                            dataIdx++;
-                        }
-                        else
-                        {
-                            // 补空行
-                            for (int c = 1; c <= table.Columns.Count; c++)
-                                table.Cell(wordRow, c).Range.Text = "";
-                        }
-                    }
-                    curTableRow += rowsPerPage;
-                }
-
-                doc.Save();
-                doc.Close(false);
-                wordApp.Quit();
-                System.Runtime.InteropServices.Marshal.ReleaseComObject(wordApp);
-            }
-
-            MessageBox.Show("批量生成Word文件已完成！");
         }
-
     }
-
 }
+
+    
+

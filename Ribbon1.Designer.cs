@@ -44,7 +44,7 @@
             this.group3 = this.Factory.CreateRibbonGroup();
             this.ExcelDataProcessing = this.Factory.CreateRibbonButton();
             this.BtnSetMapping = this.Factory.CreateRibbonButton();
-            this.button1 = this.Factory.CreateRibbonButton();
+            this.Button1 = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
             this.group2.SuspendLayout();
@@ -107,7 +107,7 @@
             // 
             this.group3.Items.Add(this.ExcelDataProcessing);
             this.group3.Items.Add(this.BtnSetMapping);
-            this.group3.Items.Add(this.button1);
+            this.group3.Items.Add(this.Button1);
             this.group3.Label = "数据处理";
             this.group3.Name = "group3";
             // 
@@ -124,12 +124,12 @@
             this.BtnSetMapping.Name = "BtnSetMapping";
             this.BtnSetMapping.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.BtnSetMapping_Click);
             // 
-            // button1
+            // Button1
             // 
-            this.button1.Label = "生成word文件";
-            this.button1.Name = "button1";
-            this.button1.ShowImage = true;
-            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
+            this.Button1.Label = "生成word文件";
+            this.Button1.Name = "Button1";
+            this.Button1.ShowImage = true;
+            this.Button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.Button1_Click);
             // 
             // Ribbon1
             // 
@@ -161,7 +161,7 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton ExcelDataProcessing;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton BtnSetMapping;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
-        protected Microsoft.Office.Tools.Ribbon.RibbonButton button1;
+        protected Microsoft.Office.Tools.Ribbon.RibbonButton Button1;
     }
 
     partial class ThisRibbonCollection
