@@ -11,7 +11,9 @@ namespace word插件
     }
     public class TableMap
     {
-        public string ExcelHeader { get; set; }
         public string WordHeader { get; set; }
+        public string ExcelHeader { get; set; } // 允许为自定义内容
+        public bool IsCustom { get; set; }      // 标记是否为自定义
     }
+
 }

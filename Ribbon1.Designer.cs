@@ -40,11 +40,15 @@
             this.SelecWordlButton = this.Factory.CreateRibbonButton();
             this.GenerateCatalog = this.Factory.CreateRibbonButton();
             this.group2 = this.Factory.CreateRibbonGroup();
-            this.comboBox1 = this.Factory.CreateRibbonComboBox();
+            this.ComboBox1 = this.Factory.CreateRibbonComboBox();
+            this.group3 = this.Factory.CreateRibbonGroup();
             this.ExcelDataProcessing = this.Factory.CreateRibbonButton();
+            this.BtnSetMapping = this.Factory.CreateRibbonButton();
+            this.button1 = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
             this.group1.SuspendLayout();
             this.group2.SuspendLayout();
+            this.group3.SuspendLayout();
             this.SuspendLayout();
             // 
             // tab1
@@ -52,6 +56,7 @@
             this.tab1.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
             this.tab1.Groups.Add(this.group1);
             this.tab1.Groups.Add(this.group2);
+            this.tab1.Groups.Add(this.group3);
             this.tab1.Label = "TabAddIns";
             this.tab1.Name = "tab1";
             // 
@@ -86,18 +91,25 @@
             // 
             // group2
             // 
-            this.group2.Items.Add(this.comboBox1);
-            this.group2.Items.Add(this.ExcelDataProcessing);
-            this.group2.Label = "数据处理";
+            this.group2.Items.Add(this.ComboBox1);
+            this.group2.Label = "参考数据选择";
             this.group2.Name = "group2";
             // 
-            // comboBox1
+            // ComboBox1
             // 
-            this.comboBox1.Label = "表格拆分依据";
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Text = null;
-            this.comboBox1.ItemsLoading += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.comboBox1_ItemsLoading);
-            this.comboBox1.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.comboBox1_SelectionChanged);
+            this.ComboBox1.Label = "表格拆分依据";
+            this.ComboBox1.Name = "ComboBox1";
+            this.ComboBox1.Text = null;
+            this.ComboBox1.ItemsLoading += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.ComboBox1_ItemsLoading);
+            this.ComboBox1.TextChanged += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.ComboBox1_SelectionChanged);
+            // 
+            // group3
+            // 
+            this.group3.Items.Add(this.ExcelDataProcessing);
+            this.group3.Items.Add(this.BtnSetMapping);
+            this.group3.Items.Add(this.button1);
+            this.group3.Label = "数据处理";
+            this.group3.Name = "group3";
             // 
             // ExcelDataProcessing
             // 
@@ -105,6 +117,19 @@
             this.ExcelDataProcessing.Name = "ExcelDataProcessing";
             this.ExcelDataProcessing.SuperTip = "选择制作的word模板文件";
             this.ExcelDataProcessing.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.ExcelDataProcessing_Click);
+            // 
+            // BtnSetMapping
+            // 
+            this.BtnSetMapping.Label = "设置映射关系";
+            this.BtnSetMapping.Name = "BtnSetMapping";
+            this.BtnSetMapping.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.BtnSetMapping_Click);
+            // 
+            // button1
+            // 
+            this.button1.Label = "生成word文件";
+            this.button1.Name = "button1";
+            this.button1.ShowImage = true;
+            this.button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.button1_Click);
             // 
             // Ribbon1
             // 
@@ -118,6 +143,8 @@
             this.group1.PerformLayout();
             this.group2.ResumeLayout(false);
             this.group2.PerformLayout();
+            this.group3.ResumeLayout(false);
+            this.group3.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -130,8 +157,11 @@
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SelecWordlButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton GenerateCatalog;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
-        internal Microsoft.Office.Tools.Ribbon.RibbonComboBox comboBox1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonComboBox ComboBox1;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton ExcelDataProcessing;
+        internal Microsoft.Office.Tools.Ribbon.RibbonButton BtnSetMapping;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
+        protected Microsoft.Office.Tools.Ribbon.RibbonButton button1;
     }
 
     partial class ThisRibbonCollection
