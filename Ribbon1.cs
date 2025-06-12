@@ -1,6 +1,6 @@
 ﻿using Microsoft.Office.Tools.Ribbon;
-using Excel = Microsoft.Office.Interop.Excel;
 using Microsoft.VisualBasic;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Drawing.Text;
@@ -9,6 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using word插件;
+using Excel = Microsoft.Office.Interop.Excel;
 
 
 namespace word插件
@@ -54,6 +55,7 @@ namespace word插件
         {
 
         }
+        //选择Excel文件
         private void SelectExcelButton_Click(object sender, RibbonControlEventArgs e)
         {
             // 使用 WinForms 的文件选择对话框
@@ -95,6 +97,7 @@ namespace word插件
                 MessageBox.Show("输入无效，请输入一个数字。", "使用默认第二行", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+        //选择Word文件
         private void SelectWordButton_Click(object sender, RibbonControlEventArgs e)
         {
             // 使用 WinForms 的文件选择对话框
@@ -137,6 +140,7 @@ namespace word插件
 
 
         }
+        //选择生成文件夹
         private void GenerateCatalog_Click(object sender, RibbonControlEventArgs e)
         {
             FolderBrowserDialog folderBrowserDialog = new FolderBrowserDialog
@@ -158,6 +162,7 @@ namespace word插件
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
+        //遍历Excel文件表头
         private void comboBox1_ItemsLoading(object sender, RibbonControlEventArgs e)
         {
             comboBox1.Items.Clear();
@@ -172,19 +177,127 @@ namespace word插件
                 comboBox1.Items.Add(item);
             }
         }
+        //选择Excel参考列
         private void comboBox1_SelectionChanged(object sender, RibbonControlEventArgs e)
         {
             string selectedItem = comboBox1.Text; // 获取选中的项
             selecteedExcelColumnName = selectedItem; // 将选中的项赋值给全局变量
         }
+        //数据处理
+        private List<string[]> ReadExcelAllRows(string excelPath)
+        {
+            var allRows = new List<string[]>();
+            var excelApp = new Excel.Application();
+            Excel.Workbook wb = null;
+            try
+            {
+                wb = excelApp.Workbooks.Open(excelPath);
+                Excel.Worksheet ws = wb.Sheets[1];
+                int totalRows = ws.UsedRange.Rows.Count;
+                int totalCols = ws.UsedRange.Columns.Count;
+
+                for (int i = 1; i <= totalRows; i++)
+                {
+                    var row = new List<string>();
+                    for (int j = 1; j <= totalCols; j++)
+                    {
+                        var val = ws.Cells[i, j].Value;
+                        row.Add(val?.ToString() ?? "");
+                    }
+                    allRows.Add(row.ToArray());
+                }
+            }
+            finally
+            {
+                if (wb != null) wb.Close(false);
+                excelApp.Quit();
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
+            }
+            return allRows;
+        }
+        //读取选择的Excel文件，以comboBox1_SelectionChanged获取的列为依据，生成.json文件，生成4个变量。TableData列中的内容，Count不同内容的个数，ValueCount同一个内容的数量，ValueRows，内容所在的行数。
         private void ExcelDataProcessing_Click(object sender, RibbonControlEventArgs e)
-        {      
-            List<string[]> allRows = new List<string[]>(); 
-            int count;
-            List<int> valueRows;
-            var processor = new DataProcessor();
-            List<ExcelValueDate> processedData = processor.ProcessColum(allRows, out count, out valueRows);
-            processor.SaveToJson(processedData);
+        {
+            // 1. 基础校验
+            if (string.IsNullOrWhiteSpace(selectedExcelPath))
+            {
+                MessageBox.Show("请先选择 Excel 文件！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(selecteedExcelColumnName))
+            {
+                MessageBox.Show("请先选择要统计的列！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            // 2. 读取Excel所有行
+            var allRows = ReadExcelAllRows(selectedExcelPath);
+            if (allRows == null || allRows.Count == 0)
+            {
+                MessageBox.Show("Excel数据读取失败。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 3. 查找目标列索引
+            int colIndex = ExcelcolumnNames.IndexOf(selecteedExcelColumnName);
+            if (colIndex < 0)
+            {
+                MessageBox.Show("未找到所选列，请刷新表头下拉框。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 4. 统计
+            var tableData = new List<ExcelValueDate>();
+            Dictionary<string, ExcelValueDate> valueDict = new Dictionary<string, ExcelValueDate>();
+            for (int i = ExcelDateFirstRaw - 1; i < allRows.Count; i++)
+            {
+                if (allRows[i].Length <= colIndex) continue;
+                string cellValue = allRows[i][colIndex]?.Trim() ?? "";
+                if (string.IsNullOrEmpty(cellValue)) continue;
+
+                if (!valueDict.TryGetValue(cellValue, out ExcelValueDate entry))
+                {
+                    entry = new ExcelValueDate
+                    {
+                        Value = cellValue,
+                        Count = 1,
+                        ValueRows = new List<int> { i + 1 } // Excel 行号1-based
+                    };
+                    valueDict[cellValue] = entry;
+                    tableData.Add(entry);
+                }
+                else
+                {
+                    entry.Count++;
+                    entry.ValueRows.Add(i + 1);
+                }
+            }
+
+            // 5. 生成变量
+            int Count = tableData.Count; // 不同内容的个数
+                                         // ValueCount: 各内容的数量列表
+            List<int> ValueCount = tableData.Select(x => x.Count).ToList();
+            // ValueRows: 各内容的行号列表（可选也可合并为字典/数组）
+            List<List<int>> ValueRows = tableData.Select(x => x.ValueRows).ToList();
+
+            // 6. 生成JSON
+            if (!Directory.Exists(GenerateCatalogPath))
+                Directory.CreateDirectory(GenerateCatalogPath);
+            string fileName = $"Excel统计_{selecteedExcelColumnName}_{DateTime.Now:yyyyMMdd_HHmmss}.json";
+            string filePath = Path.Combine(GenerateCatalogPath, fileName);
+
+            // json数据结构：tableData即为所有信息
+            File.WriteAllText(filePath, JsonConvert.SerializeObject(tableData, Formatting.Indented));
+
+            // 7. 提示
+            MessageBox.Show(
+                $"已完成统计并导出JSON。\n\n" +
+                $"列：{selecteedExcelColumnName}\n" +
+                $"不同内容数量：{Count}\n" +
+                $"JSON文件：\n{filePath}",
+                "统计成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
     }
 }
+
+    
