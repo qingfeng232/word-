@@ -35,59 +35,37 @@
         private void InitializeComponent()
         {
             this.tab1 = this.Factory.CreateRibbonTab();
-            this.group1 = this.Factory.CreateRibbonGroup();
-            this.SelectExcelButton = this.Factory.CreateRibbonButton();
-            this.SelecWordlButton = this.Factory.CreateRibbonButton();
-            this.GenerateCatalog = this.Factory.CreateRibbonButton();
+            this.tab2 = this.Factory.CreateRibbonTab();
             this.group2 = this.Factory.CreateRibbonGroup();
             this.ComboBox1 = this.Factory.CreateRibbonComboBox();
             this.group3 = this.Factory.CreateRibbonGroup();
             this.ExcelDataProcessing = this.Factory.CreateRibbonButton();
             this.BtnSetMapping = this.Factory.CreateRibbonButton();
             this.Button1 = this.Factory.CreateRibbonButton();
+            this.group1 = this.Factory.CreateRibbonGroup();
+            this.SelectExcelButton = this.Factory.CreateRibbonButton();
+            this.SelecWordlButton = this.Factory.CreateRibbonButton();
+            this.GenerateCatalog = this.Factory.CreateRibbonButton();
             this.tab1.SuspendLayout();
-            this.group1.SuspendLayout();
+            this.tab2.SuspendLayout();
             this.group2.SuspendLayout();
             this.group3.SuspendLayout();
+            this.group1.SuspendLayout();
             this.SuspendLayout();
             // 
             // tab1
             // 
             this.tab1.ControlId.ControlIdType = Microsoft.Office.Tools.Ribbon.RibbonControlIdType.Office;
-            this.tab1.Groups.Add(this.group1);
-            this.tab1.Groups.Add(this.group2);
-            this.tab1.Groups.Add(this.group3);
             this.tab1.Label = "TabAddIns";
             this.tab1.Name = "tab1";
             // 
-            // group1
+            // tab2
             // 
-            this.group1.Items.Add(this.SelectExcelButton);
-            this.group1.Items.Add(this.SelecWordlButton);
-            this.group1.Items.Add(this.GenerateCatalog);
-            this.group1.Label = "文件选择";
-            this.group1.Name = "group1";
-            // 
-            // SelectExcelButton
-            // 
-            this.SelectExcelButton.Label = "选择Excel文件";
-            this.SelectExcelButton.Name = "SelectExcelButton";
-            this.SelectExcelButton.SuperTip = "选择制作的Excel模板文件";
-            this.SelectExcelButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SelectExcelButton_Click);
-            // 
-            // SelecWordlButton
-            // 
-            this.SelecWordlButton.Label = "选择Word文件";
-            this.SelecWordlButton.Name = "SelecWordlButton";
-            this.SelecWordlButton.SuperTip = "选择制作的word模板文件";
-            this.SelecWordlButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SelectWordButton_Click);
-            // 
-            // GenerateCatalog
-            // 
-            this.GenerateCatalog.Label = "选择保存文件夹";
-            this.GenerateCatalog.Name = "GenerateCatalog";
-            this.GenerateCatalog.SuperTip = "处理完成的文件保存位置，默认在模板目录下";
-            this.GenerateCatalog.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.GenerateCatalog_Click);
+            this.tab2.Groups.Add(this.group1);
+            this.tab2.Groups.Add(this.group2);
+            this.tab2.Groups.Add(this.group3);
+            this.tab2.Label = "插件";
+            this.tab2.Name = "tab2";
             // 
             // group2
             // 
@@ -131,20 +109,52 @@
             this.Button1.ShowImage = true;
             this.Button1.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.Button1_Click);
             // 
+            // group1
+            // 
+            this.group1.Items.Add(this.SelectExcelButton);
+            this.group1.Items.Add(this.SelecWordlButton);
+            this.group1.Items.Add(this.GenerateCatalog);
+            this.group1.Label = "文件选择";
+            this.group1.Name = "group1";
+            // 
+            // SelectExcelButton
+            // 
+            this.SelectExcelButton.Label = "选择Excel文件";
+            this.SelectExcelButton.Name = "SelectExcelButton";
+            this.SelectExcelButton.SuperTip = "选择制作的Excel模板文件";
+            this.SelectExcelButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SelectExcelButton_Click);
+            // 
+            // SelecWordlButton
+            // 
+            this.SelecWordlButton.Label = "选择Word文件";
+            this.SelecWordlButton.Name = "SelecWordlButton";
+            this.SelecWordlButton.SuperTip = "选择制作的word模板文件";
+            this.SelecWordlButton.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.SelectWordButton_Click);
+            // 
+            // GenerateCatalog
+            // 
+            this.GenerateCatalog.Label = "选择保存文件夹";
+            this.GenerateCatalog.Name = "GenerateCatalog";
+            this.GenerateCatalog.SuperTip = "处理完成的文件保存位置，默认在模板目录下";
+            this.GenerateCatalog.Click += new Microsoft.Office.Tools.Ribbon.RibbonControlEventHandler(this.GenerateCatalog_Click);
+            // 
             // Ribbon1
             // 
             this.Name = "Ribbon1";
             this.RibbonType = "Microsoft.Word.Document";
             this.Tabs.Add(this.tab1);
+            this.Tabs.Add(this.tab2);
             this.Load += new Microsoft.Office.Tools.Ribbon.RibbonUIEventHandler(this.Ribbon1_Load);
             this.tab1.ResumeLayout(false);
             this.tab1.PerformLayout();
-            this.group1.ResumeLayout(false);
-            this.group1.PerformLayout();
+            this.tab2.ResumeLayout(false);
+            this.tab2.PerformLayout();
             this.group2.ResumeLayout(false);
             this.group2.PerformLayout();
             this.group3.ResumeLayout(false);
             this.group3.PerformLayout();
+            this.group1.ResumeLayout(false);
+            this.group1.PerformLayout();
             this.ResumeLayout(false);
 
         }
@@ -152,15 +162,16 @@
         #endregion
 
         internal Microsoft.Office.Tools.Ribbon.RibbonTab tab1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonTab tab2;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group1;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SelectExcelButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton SelecWordlButton;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton GenerateCatalog;
         internal Microsoft.Office.Tools.Ribbon.RibbonGroup group2;
         internal Microsoft.Office.Tools.Ribbon.RibbonComboBox ComboBox1;
+        internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton ExcelDataProcessing;
         internal Microsoft.Office.Tools.Ribbon.RibbonButton BtnSetMapping;
-        internal Microsoft.Office.Tools.Ribbon.RibbonGroup group3;
         protected Microsoft.Office.Tools.Ribbon.RibbonButton Button1;
     }
 
