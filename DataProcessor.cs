@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace word插件
 {
@@ -12,8 +11,8 @@ namespace word插件
     public class TableMap
     {
         public string WordHeader { get; set; }
-        public string ExcelHeader { get; set; } // 允许为自定义内容
-        public bool IsCustom { get; set; }      // 标记是否为自定义
+        public string ExcelHeader { get; set; }// 允许为自定义内容
+        public bool IsCustom { get; set; }// 标记是否为自定义
+        public string InputContent { get; set; }//记录输入的内容
     }
-
 }

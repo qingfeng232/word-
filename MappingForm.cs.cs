@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 
 namespace word插件
 
 {
-    
+
     public class MappingForm : Form
     {
         public List<TableMap> MappingResult { get; set; } = new List<TableMap>();
@@ -78,13 +77,15 @@ namespace word插件
                     map.WordHeader = wordHeaders[i];
                     if (comboList[i].SelectedIndex == 0)
                     {
-                        map.ExcelHeader = customBoxList[i].Text?.Trim();
+                        map.ExcelHeader = null;
                         map.IsCustom = true;
+                        map.InputContent = customBoxList[i].Text?.Trim();
                     }
                     else
                     {
                         map.ExcelHeader = comboList[i].SelectedItem?.ToString();
                         map.IsCustom = false;
+                        map.InputContent = null;
                     }
                     MappingResult.Add(map);
                 }
