@@ -1,4 +1,5 @@
-﻿using Microsoft.Office.Tools.Ribbon;
+﻿using Microsoft.Office.Interop.Word;
+using Microsoft.Office.Tools.Ribbon;
 using Microsoft.VisualBasic;
 using Newtonsoft.Json;
 using System;
@@ -7,6 +8,7 @@ using System.Drawing.Text;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Web;
 using System.Windows.Forms;
 using word插件;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
@@ -18,13 +20,13 @@ namespace word插件
     public partial class Ribbon1
     {
         // 定义全局变量
-        public static string selectedExcelPath = string.Empty,
+        public static string        selectedExcelPath = string.Empty,
                                      selectedWordPath = string.Empty,
                                   GenerateCatalogPath = string.Empty,
                              selecteedExcelColumnName = string.Empty;
         // 定义Excel和Word的起始行
-        public static int ExcelDateFirstRaw = 2,
-                                     WordDateFirstRaw = 2;
+        public static int           ExcelDateFirstRaw = 2,
+                                     WordDateFirstRaw = 3;
         //读取的Excel的表头
         public static List<string> ExcelcolumnNames = new List<string>();
         //读取Excel表头
@@ -77,7 +79,7 @@ namespace word插件
             }
             return result;
         }
-        //
+        //刷新Excel表头
         private void RefreshExcelColumnComboBox()
         {
             ComboBox1.Items.Clear();
@@ -373,9 +375,10 @@ namespace word插件
                 MessageBox.Show("映射关系设置完成！");
             }
         }
-        //生成文件   
+        // 批量生成Word文件
         private void Button1_Click(object sender, RibbonControlEventArgs e)
         {
+            // 查找最新的统计JSON文件
             string[] files = Directory.GetFiles(GenerateCatalogPath, "Excel统计_*.json");
             if (files.Length == 0)
             {
@@ -383,49 +386,76 @@ namespace word插件
                 return;
             }
             string statFile = files.OrderByDescending(f => File.GetLastWriteTime(f)).First();
+
+            // 读取分组统计内容
             var groupList = JsonConvert.DeserializeObject<List<ExcelValueDate>>(File.ReadAllText(statFile));
-            var allRows = ReadExcelAllRows(selectedExcelPath);
-            var excelHeaders = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw);
-            var wordHeaders = GetWordColumnNames(selectedWordPath, WordDateFirstRaw);
+            var allRows = ReadExcelAllRows(selectedExcelPath); // 所有Excel数据
+            var excelHeaders = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw); // Excel表头
+            var wordHeaders = GetWordColumnNames(selectedWordPath, WordDateFirstRaw); // Word表头
+
+            // 校验映射关系
             if (CurrentMapping == null || CurrentMapping.Count == 0)
             {
-                MessageBox.Show("未设置映射关系！"); return;
+                MessageBox.Show("未设置映射关系！");
+                return;
             }
             var mapDict = CurrentMapping.ToDictionary(x => x.WordHeader, x => x.ExcelHeader);
+
+            // 获取每页填充数据行数（用户输入）
             string input1 = Microsoft.VisualBasic.Interaction.InputBox("第一页填充数据行数（如11）：", "设置", "11");
             string input2 = Microsoft.VisualBasic.Interaction.InputBox("后续页填充数据行数（如18）：", "设置", "18");
             int rowsPerPage1 = 11, rowsPerPage2 = 18;
             if (!int.TryParse(input1, out rowsPerPage1) || rowsPerPage1 <= 0) rowsPerPage1 = 11;
             if (!int.TryParse(input2, out rowsPerPage2) || rowsPerPage2 <= 0) rowsPerPage2 = 18;
+
+            // 对每个唯一分组Value生成一个Word文件
             foreach (var group in groupList)
             {
+
                 string value = group.Value;
                 string outputPath = Path.Combine(GenerateCatalogPath, $"{value}.docx");
-                File.Copy(selectedWordPath, outputPath, true);
+                File.Copy(selectedWordPath, outputPath, true); // 复制模板
+
+                // 打开Word应用和文档
                 var wordApp = new Microsoft.Office.Interop.Word.Application();
                 var doc = wordApp.Documents.Open(outputPath, ReadOnly: false, Visible: false);
+
+                // 获取首页表格和后续页模板表格
                 var tableFirst = doc.Tables[1];
                 var tableTemplate = doc.Tables[2];
-                int dataIdx = 0;
+
+                int dataIdx = 0; // 当前分组下数据行索引
                 int totalRows = group.ValueRows.Count;
 
-                // --- 填写第一页 ---
-                int dataStartRow = 2; // 假设第1行为表头
+                // ------------- 填写第一页 -----------------
+                int dataStartRow = WordDateFirstRaw; // 数据区起始行，通常是2
                 int dataEndRow = tableFirst.Rows.Count;
+                // 自动识别数据区，排除签字/合并行
                 for (; dataEndRow >= dataStartRow; dataEndRow--)
                 {
-                    // 跳过合并（签字）区，只写数据区
                     if (tableFirst.Rows[dataEndRow].Cells.Count == tableFirst.Columns.Count)
-                        break;
+                        break; // 找到最后有效数据区行
                 }
-                // 动态分区：只写数据区
+                // 循环写入数据区
                 for (int row = dataStartRow; row <= dataEndRow && dataIdx < totalRows; row++)
                 {
+
                     int excelRowIdx = group.ValueRows[dataIdx] - 1;
                     if (excelRowIdx >= allRows.Count) { dataIdx++; continue; }
                     var excelRow = allRows[excelRowIdx];
                     for (int c = 1; c <= tableFirst.Columns.Count; c++)
                     {
+                        //获取映射关系
+                        var map = CurrentMapping[c - 1];
+                        string valueWrite;
+                        if (map.IsCustom)
+                            valueWrite = map.InputContent ?? "";
+                        else
+                        {
+                            int idx = excelHeaders.IndexOf(map.ExcelHeader);
+                            valueWrite = (idx >= 0 && idx < excelRow.Length) ? excelRow[idx]:"";
+                        }
+                        tableFirst.Cell(row,c).Range.Text = valueWrite;
                         string wordHeader = wordHeaders[c - 1];
                         if (!mapDict.TryGetValue(wordHeader, out string excelHeader)) continue;
                         int excelColIdx = excelHeaders.IndexOf(excelHeader);
@@ -436,21 +466,26 @@ namespace word插件
                         }
                         catch
                         {
-                            continue;
+                            continue; // 合并行等异常跳过
                         }
                     }
                     dataIdx++;
                 }
-                // 补空
+                // 补空行
                 for (int row = dataStartRow + dataIdx; row <= dataEndRow; row++)
                     for (int c = 1; c <= tableFirst.Columns.Count; c++)
                         tableFirst.Cell(row, c).Range.Text = "";
+                //填充完删除模板页（第二页）
+                if (doc.Tables.Count >= 2)
+                {
+                    doc.Tables[2].Delete();
+                }
 
-                // --- 填写后续所有页 ---
+                // ------------- 填写后续所有页 ---------------
                 while (dataIdx < totalRows)
                 {
+                    // 复制模板表并粘贴到文档末尾
                     tableTemplate.Range.Copy();
-                    // 移动到文档末尾并插入回车，防止粘到表格内部、
                     wordApp.Visible = true;
                     doc.Activate();
                     object what = Microsoft.Office.Interop.Word.WdGoToItem.wdGoToLine;
@@ -459,6 +494,7 @@ namespace word插件
                     wordApp.Selection.TypeParagraph();
                     wordApp.Selection.Paste();
 
+                    // 等待新表插入
                     int tryCount = 0;
                     while (wordApp.Selection.Tables.Count == 0 && tryCount < 20)
                     {
@@ -472,14 +508,15 @@ namespace word插件
                     }
                     var newTable = wordApp.Selection.Tables[1];
 
-                    // 自动识别数据区行数
-                    int newDataStartRow = 2;
+                    // 动态识别后续页的数据区
+                    int newDataStartRow = WordDateFirstRaw; // 假定表头1行，数据区从2开始
                     int newDataEndRow = newTable.Rows.Count;
                     for (; newDataEndRow >= newDataStartRow; newDataEndRow--)
                     {
                         if (newTable.Rows[newDataEndRow].Cells.Count == newTable.Columns.Count)
                             break;
                     }
+                    // 循环写入
                     for (int row = newDataStartRow; row <= newDataEndRow && dataIdx < totalRows; row++)
                     {
                         int excelRowIdx = group.ValueRows[dataIdx] - 1;
@@ -487,6 +524,17 @@ namespace word插件
                         var excelRow = allRows[excelRowIdx];
                         for (int c = 1; c <= newTable.Columns.Count; c++)
                         {
+                            //获取映射关系
+                            var map = CurrentMapping[c - 1];
+                            string valueWrite;
+                            if (map.IsCustom)
+                                valueWrite = map.InputContent ?? "";
+                            else
+                            {
+                                int idx = excelHeaders.IndexOf(map.ExcelHeader);
+                                valueWrite = (idx >= 0 && idx < excelRow.Length) ? excelRow[idx] : "";
+                            }
+                            newTable.Cell(row, c).Range.Text = valueWrite;
                             string wordHeader = wordHeaders[c - 1];
                             if (!mapDict.TryGetValue(wordHeader, out string excelHeader)) continue;
                             int excelColIdx = excelHeaders.IndexOf(excelHeader);
@@ -502,17 +550,22 @@ namespace word插件
                         }
                         dataIdx++;
                     }
-                    // 补空
+                    // 补空行
                     for (int row = newDataStartRow + dataIdx; row <= newDataEndRow; row++)
                         for (int c = 1; c <= newTable.Columns.Count; c++)
                             newTable.Cell(row, c).Range.Text = "";
+                    
                 }
+
+                // 保存、关闭文档与应用
                 doc.Save();
                 doc.Close(false);
                 wordApp.Quit();
                 System.Runtime.InteropServices.Marshal.ReleaseComObject(wordApp);
             }
+            // 最后提示
             MessageBox.Show("批量生成Word文件已完成！");
         }
+
     }
 }
