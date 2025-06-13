@@ -18,7 +18,7 @@ namespace word插件
     public partial class Ribbon1
     {
         // 定义全局变量
-        public static string        selectedExcelPath = string.Empty,
+        public static string selectedExcelPath = string.Empty,
                                      selectedWordPath = string.Empty,
                                   GenerateCatalogPath = string.Empty,
                              selecteedExcelColumnName = string.Empty;
@@ -182,7 +182,7 @@ namespace word插件
 
             }
             // Word文件的数据处理
-            string input = Microsoft.VisualBasic.Interaction.InputBox("请输入Excel数据起始行", "Excel数据起始行", "2", 2);
+            string input = Microsoft.VisualBasic.Interaction.InputBox("请输入Excel数据起始行", "Excel数据起始行", "3", 3);
             if (int.TryParse(input, out int row))
             {
                 WordDateFirstRaw = row;
@@ -220,7 +220,7 @@ namespace word插件
         //遍历Excel文件表头
         private void ComboBox1_ItemsLoading(object sender, RibbonControlEventArgs e)
         {
-            
+
         }
         //选择Excel参考列
         private void ComboBox1_SelectionChanged(object sender, RibbonControlEventArgs e)
@@ -373,13 +373,146 @@ namespace word插件
                 MessageBox.Show("映射关系设置完成！");
             }
         }
-        //生成文件
+        //生成文件   
         private void Button1_Click(object sender, RibbonControlEventArgs e)
         {
+            string[] files = Directory.GetFiles(GenerateCatalogPath, "Excel统计_*.json");
+            if (files.Length == 0)
+            {
+                MessageBox.Show("未找到统计文件");
+                return;
+            }
+            string statFile = files.OrderByDescending(f => File.GetLastWriteTime(f)).First();
+            var groupList = JsonConvert.DeserializeObject<List<ExcelValueDate>>(File.ReadAllText(statFile));
+            var allRows = ReadExcelAllRows(selectedExcelPath);
+            var excelHeaders = GetExcelColumnNames(selectedExcelPath, ExcelDateFirstRaw);
+            var wordHeaders = GetWordColumnNames(selectedWordPath, WordDateFirstRaw);
+            if (CurrentMapping == null || CurrentMapping.Count == 0)
+            {
+                MessageBox.Show("未设置映射关系！"); return;
+            }
+            var mapDict = CurrentMapping.ToDictionary(x => x.WordHeader, x => x.ExcelHeader);
+            string input1 = Microsoft.VisualBasic.Interaction.InputBox("第一页填充数据行数（如11）：", "设置", "11");
+            string input2 = Microsoft.VisualBasic.Interaction.InputBox("后续页填充数据行数（如18）：", "设置", "18");
+            int rowsPerPage1 = 11, rowsPerPage2 = 18;
+            if (!int.TryParse(input1, out rowsPerPage1) || rowsPerPage1 <= 0) rowsPerPage1 = 11;
+            if (!int.TryParse(input2, out rowsPerPage2) || rowsPerPage2 <= 0) rowsPerPage2 = 18;
+            foreach (var group in groupList)
+            {
+                string value = group.Value;
+                string outputPath = Path.Combine(GenerateCatalogPath, $"{value}.docx");
+                File.Copy(selectedWordPath, outputPath, true);
+                var wordApp = new Microsoft.Office.Interop.Word.Application();
+                var doc = wordApp.Documents.Open(outputPath, ReadOnly: false, Visible: false);
+                var tableFirst = doc.Tables[1];
+                var tableTemplate = doc.Tables[2];
+                int dataIdx = 0;
+                int totalRows = group.ValueRows.Count;
 
+                // --- 填写第一页 ---
+                int dataStartRow = 2; // 假设第1行为表头
+                int dataEndRow = tableFirst.Rows.Count;
+                for (; dataEndRow >= dataStartRow; dataEndRow--)
+                {
+                    // 跳过合并（签字）区，只写数据区
+                    if (tableFirst.Rows[dataEndRow].Cells.Count == tableFirst.Columns.Count)
+                        break;
+                }
+                // 动态分区：只写数据区
+                for (int row = dataStartRow; row <= dataEndRow && dataIdx < totalRows; row++)
+                {
+                    int excelRowIdx = group.ValueRows[dataIdx] - 1;
+                    if (excelRowIdx >= allRows.Count) { dataIdx++; continue; }
+                    var excelRow = allRows[excelRowIdx];
+                    for (int c = 1; c <= tableFirst.Columns.Count; c++)
+                    {
+                        string wordHeader = wordHeaders[c - 1];
+                        if (!mapDict.TryGetValue(wordHeader, out string excelHeader)) continue;
+                        int excelColIdx = excelHeaders.IndexOf(excelHeader);
+                        if (excelColIdx < 0 || excelColIdx >= excelRow.Length) continue;
+                        try
+                        {
+                            tableFirst.Cell(row, c).Range.Text = excelRow[excelColIdx];
+                        }
+                        catch
+                        {
+                            continue;
+                        }
+                    }
+                    dataIdx++;
+                }
+                // 补空
+                for (int row = dataStartRow + dataIdx; row <= dataEndRow; row++)
+                    for (int c = 1; c <= tableFirst.Columns.Count; c++)
+                        tableFirst.Cell(row, c).Range.Text = "";
+
+                // --- 填写后续所有页 ---
+                while (dataIdx < totalRows)
+                {
+                    tableTemplate.Range.Copy();
+                    // 移动到文档末尾并插入回车，防止粘到表格内部、
+                    wordApp.Visible = true;
+                    doc.Activate();
+                    object what = Microsoft.Office.Interop.Word.WdGoToItem.wdGoToLine;
+                    object which = Microsoft.Office.Interop.Word.WdGoToDirection.wdGoToLast;
+                    wordApp.Selection.GoTo(ref what, ref which);
+                    wordApp.Selection.TypeParagraph();
+                    wordApp.Selection.Paste();
+
+                    int tryCount = 0;
+                    while (wordApp.Selection.Tables.Count == 0 && tryCount < 20)
+                    {
+                        System.Threading.Thread.Sleep(100);
+                        tryCount++;
+                    }
+                    if (wordApp.Selection.Tables.Count == 0)
+                    {
+                        MessageBox.Show("粘贴新表失败，未检测到新表！");
+                        break;
+                    }
+                    var newTable = wordApp.Selection.Tables[1];
+
+                    // 自动识别数据区行数
+                    int newDataStartRow = 2;
+                    int newDataEndRow = newTable.Rows.Count;
+                    for (; newDataEndRow >= newDataStartRow; newDataEndRow--)
+                    {
+                        if (newTable.Rows[newDataEndRow].Cells.Count == newTable.Columns.Count)
+                            break;
+                    }
+                    for (int row = newDataStartRow; row <= newDataEndRow && dataIdx < totalRows; row++)
+                    {
+                        int excelRowIdx = group.ValueRows[dataIdx] - 1;
+                        if (excelRowIdx >= allRows.Count) { dataIdx++; continue; }
+                        var excelRow = allRows[excelRowIdx];
+                        for (int c = 1; c <= newTable.Columns.Count; c++)
+                        {
+                            string wordHeader = wordHeaders[c - 1];
+                            if (!mapDict.TryGetValue(wordHeader, out string excelHeader)) continue;
+                            int excelColIdx = excelHeaders.IndexOf(excelHeader);
+                            if (excelColIdx < 0 || excelColIdx >= excelRow.Length) continue;
+                            try
+                            {
+                                newTable.Cell(row, c).Range.Text = excelRow[excelColIdx];
+                            }
+                            catch
+                            {
+                                continue;
+                            }
+                        }
+                        dataIdx++;
+                    }
+                    // 补空
+                    for (int row = newDataStartRow + dataIdx; row <= newDataEndRow; row++)
+                        for (int c = 1; c <= newTable.Columns.Count; c++)
+                            newTable.Cell(row, c).Range.Text = "";
+                }
+                doc.Save();
+                doc.Close(false);
+                wordApp.Quit();
+                System.Runtime.InteropServices.Marshal.ReleaseComObject(wordApp);
+            }
+            MessageBox.Show("批量生成Word文件已完成！");
         }
     }
 }
-
-    
-
