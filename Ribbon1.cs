@@ -2,22 +2,22 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using System.Windows.Forms;
 using Excel = Microsoft.Office.Interop.Excel;
-using Word = Microsoft.Office.Interop.Word;
-
-
+using Word  = Microsoft.Office.Interop.Word;
 namespace word插件
 {
     public partial class Ribbon1
     {
         // 定义全局变量
-        public static string selectedExcelPath = string.Empty,
+        public static string        selectedExcelPath = string.Empty,
                                      selectedWordPath = string.Empty,
                                   GenerateCatalogPath = string.Empty,
                              selecteedExcelColumnName = string.Empty;
@@ -27,29 +27,66 @@ namespace word插件
         //读取的Excel的表头
         public static List<string> ExcelcolumnNames = new List<string>();
         //读取Excel表头
-        private List<string> GetExcelColumnNames(string Path, int Datarow)
+        private List<string> GetExcelColumnNames(string path, int dataRow)
         {
-            var columnNames = new List<string>();
-            Excel.Application excelApp = new Excel.Application();
-            Excel.Workbook workbook = excelApp.Workbooks.Open(Path);
-            Excel.Worksheet worksheet = workbook.Sheets[1];
+            var result = new List<string>();//存储表头名称
+            Excel.Application app = null;//Excel应用程序对象
+            Excel.Workbook wb = null;//工作簿对象
+            Excel.Worksheet ws = null;//工作表对象
+            Excel.Range used = null, headerRow = null;//用于存储使用范围和表头行的范围
 
-            int HeaderRow = Datarow - 1;
-            int col = 1;
-            // 从第一列开始
-            while (true)
+            try
             {
-                var cellValue = worksheet.Cells[HeaderRow, col].Value;
-                if (cellValue == null || string.IsNullOrWhiteSpace(cellValue.ToString()))
-                    break; // 如果单元格为空，停止读取}
-                columnNames.Add(cellValue.ToString());
-                col++;
+                app = new Excel.Application { Visible = false, ScreenUpdating = false, DisplayAlerts = false };//初始化Excel应用程序
+                wb = app.Workbooks.Open(path, ReadOnly: true);//打开指定路径的工作簿
+                ws = (Excel.Worksheet)wb.Sheets[1];//获取第一个工作表
+
+                int headerRowIndex = Math.Max(1, dataRow - 1);
+                used = ws.UsedRange;//获取工作表的使用范围
+                int totalCols = used.Columns.Count;//获取总列数
+
+                headerRow = ws.Range[ws.Cells[headerRowIndex, 1], ws.Cells[headerRowIndex, totalCols]];//获取表头行的范围
+                object[,] values = headerRow.Value2 as object[,];//将表头行的值存储为二维数组
+
+                for (int c = 1; c <= totalCols; c++)
+                {
+                    var v = values[1, c]; // 单行区域的第一维固定为1
+                    string text = v?.ToString().Trim();
+                    // 跳过空白，但不提前停止
+                    result.Add(string.IsNullOrEmpty(text) ? "" : text);
+                }
+
+                // 去掉尾部全空列（可选）
+                for (int i = result.Count - 1; i >= 0; i--)
+                {
+                    if (!string.IsNullOrEmpty(result[i])) break;
+                    result.RemoveAt(i);
+                }
+
+                return result;
             }
-            workbook.Close(false);
-            excelApp.Quit();
-            System.Runtime.InteropServices.Marshal.ReleaseComObject(excelApp);
-            return columnNames;
+            //释放缓存
+            finally
+            {
+                if (headerRow != null) Marshal.ReleaseComObject(headerRow);
+                if (used != null) Marshal.ReleaseComObject(used);
+                if (ws != null) Marshal.ReleaseComObject(ws);
+                if (wb != null)
+                {
+                    try { wb.Close(false); } catch { }
+                    Marshal.ReleaseComObject(wb);
+                }
+                if (app != null)
+                {
+                    try { app.Quit(); } catch { }
+                    Marshal.ReleaseComObject(app);
+                }
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
         }
+
+        
         //读取Word表头
         private List<string> GetWordColumnNames(string wordPath, int dataRow)
         {
@@ -59,7 +96,7 @@ namespace word插件
             try
             {
                 doc = wordApp.Documents.Open(wordPath, ReadOnly: true);
-                var table = doc.Tables[1]; // 假设只取第一个表
+                var table = doc.Tables[1]; // 只取第一个表
                 int headerRow = dataRow - 1;
                 for (int col = 1; col <= table.Columns.Count; col++)
                 {
@@ -577,11 +614,9 @@ namespace word插件
                         Word.Range endRange = doc.Content;
                         object collapseEnd = Word.WdCollapseDirection.wdCollapseEnd;
                         object breakType = Word.WdBreakType.wdPageBreak;
-
                         endRange.Collapse(ref collapseEnd);
                         endRange.InsertBreak(ref breakType);
                         endRange.Paste();
-
                         // 等待新表格被插入
                         int oldTableCount = doc.Tables.Count - 1;
                         int tryCount = 0;
@@ -605,7 +640,7 @@ namespace word插件
                             int excelRowIdx = group.ValueRows[dataIdx] - 1;
                             if (excelRowIdx >= allRows.Count) { dataIdx++; continue; }
 
-                            // ✅ 正确使用 newTable
+                            // 正确使用 newTable
                             FillTableRow(newTable, row, excelRowIdx, allRows, excelHeaders, wordHeaders, mapDict, customDict);
                             dataIdx++;
                         }
