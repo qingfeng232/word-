@@ -91,22 +91,29 @@ namespace word插件
         private List<string> GetWordColumnNames(string wordPath, int dataRow)
         {
             var result = new List<string>();
-            var wordApp = new Microsoft.Office.Interop.Word.Application();
-            Microsoft.Office.Interop.Word.Document doc = null;
+            Word.Application wordApp = new Word.Application();
+            Word.Document doc = null;
+            Word.Table  table = null;
             try
             {
-                doc = wordApp.Documents.Open(wordPath, ReadOnly: true);
-                var table = doc.Tables[1]; // 只取第一个表
-                int headerRow = dataRow - 1;
+                doc   = wordApp.Documents.Open(wordPath, ReadOnly: true);
+                if(doc.Tables.Count<1) return result;//没有表格直接返回空
+
+                table = doc.Tables[1]; // 只取第一个表
+                int headerRow = Math.Max(1, dataRow - 1);
                 for (int col = 1; col <= table.Columns.Count; col++)
                 {
-                    var cellValue = table.Cell(headerRow, col).Range.Text;
+                    string cellValue = table.Cell(headerRow, col).Range.Text;
                     cellValue = cellValue?.Replace("\r\a", "").Trim(); // 去除Word单元格特殊符号
-                    result.Add(cellValue);
+                    result.Add(cellValue ?? "");//添加到结果列表
                 }
             }
-            finally
+            finally//释放缓存
             {
+                if(table !=null)
+                {
+                    SafeRelease(ref table);
+                }
                 if (doc != null)
                 {
                     try { doc.Close(false); } catch { }
@@ -412,8 +419,6 @@ namespace word插件
             if (mapForm.ShowDialog() == DialogResult.OK)
             {
                 List<TableMap> mapping = mapForm.MappingResult;
-                // 你可以在这里将mapping存到全局变量或导出为文件，供后续批量填充用
-                // 例如:
                 this.CurrentMapping = mapping;
                 MessageBox.Show("映射关系设置完成！");
             }
@@ -442,7 +447,7 @@ namespace word插件
                                    Word.Table table,
                                    int row,
                                    int excelRowIdx,
-                                   List<string[]> allRows,
+                                   List<string[]> allRows,// Excel所有行数据
                                    List<string> excelHeaders,
                                    List<string> wordHeaders,
                                    Dictionary<string, string> mapDict,
