@@ -17,7 +17,7 @@ namespace word插件
     public partial class Ribbon1
     {
         // 定义全局变量
-        public static string        selectedExcelPath = string.Empty,
+        public static string selectedExcelPath = string.Empty,
                                      selectedWordPath = string.Empty,
                                   GenerateCatalogPath = string.Empty,
                              selecteedExcelColumnName = string.Empty;
