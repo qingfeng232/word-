@@ -656,7 +656,10 @@ namespace word插件
                         SafeRelease(ref newTable);
                     }
 
-                    doc.Tables[2].Delete();//删除第二页表格
+                    if (doc.Tables.Count >= 2)
+                    {
+                        doc.Tables[2].Delete();//删除第二页表格
+                    }
                     doc.Save();
                     doc.Close(false);
                     wordApp.Quit();
